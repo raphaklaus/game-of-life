@@ -14,6 +14,10 @@ config/name="Game-of-life"
 run/main_scene="res://grid.tscn"
 config/icon="res://icon.png"
 
+[debug]
+
+settings/stdout/print_fps=true
+
 [display]
 
 window/size/height=640
@@ -21,6 +25,14 @@ window/size/height=640
 [gui]
 
 common/drop_mouse_on_gui_input_disabled=true
+
+[input]
+
+esc={
+"deadzone": 0.5,
+"events": [ Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":16777217,"physical_scancode":0,"unicode":0,"echo":false,"script":null)
+ ]
+}
 
 [network]
 

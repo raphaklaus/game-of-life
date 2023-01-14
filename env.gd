@@ -30,8 +30,9 @@ func _ready():
 	var max_vp_h = viewport_size.y - cellH
 
 	population = create_initial_generation(population)
-#	print(population)
-	position_population(population)
+	for h in max_h_grids:
+		for w in max_w_grids:
+			position_population(population, w, h)
 
 func create_initial_generation(population):
 	for h in max_h_grids:
@@ -56,24 +57,20 @@ func create_cell(w, h, alive):
 	add_child(instance)
 	return instance
 
-func position_population(population):
-	for h in max_h_grids:
-		for w in max_w_grids:
-			if (population[h][w].status == 1):
-				if (population[h][w].ref == null):
-					population[h][w] = {"status": 1, "ref": create_cell(w, h, true)}
-				
-				population[h][w].ref.set_alive(true)
-			elif (population[h][w].status == -1):
-				if (population[h][w].ref):
-					population[h][w].ref.set_alive(false)
-				else:
-					population[h][w] = {"status": -1, "ref": create_cell(w, h, false)}
-					population[h][w].ref.set_alive(false)
+func position_population(population, w, h):
+	if (population[h][w].status == 1):
+		if (population[h][w].ref == null):
+			population[h][w] = {"status": 1, "ref": create_cell(w, h, true)}
+		
+		population[h][w].ref.set_alive(true)
+	elif (population[h][w].status == -1):
+		if (population[h][w].ref):
+			population[h][w].ref.set_alive(false)
+		else:
+			population[h][w] = {"status": -1, "ref": create_cell(w, h, false)}
+			population[h][w].ref.set_alive(false)
 					
-				
 
-	
 func rule(population, new_population, w, h, current_status, predicate, target_status):
 	var count = 0
 	if (population[h][w].status == current_status):
@@ -118,25 +115,23 @@ func is_count_3(count):
 func is_count_less_than_2(count):
 	return count < 2
 
-func create_next_generation(population, new_population):
-	for h in max_h_grids:
-		for w in max_w_grids:
-			# underpopulation
-			new_population = rule(population, new_population, w, h, 1, funcref(self, "is_count_less_than_2"), -1)
-			# overpopulation
-			new_population = rule(population, new_population, w, h, 1, funcref(self, "is_count_more_than_3"), -1)
-			# reproduction
-			new_population = rule(population, new_population, w, h, -1, funcref(self, "is_count_3"), 1)
-			# keeps existing
-			new_population = rule(population, new_population, w, h, 1, funcref(self, "is_count_2_or_3"), 1)
+func create_next_generation(population, new_population, w, h):
+	# underpopulation
+	new_population = rule(population, new_population, w, h, 1, funcref(self, "is_count_less_than_2"), -1)
+	# overpopulation
+	new_population = rule(population, new_population, w, h, 1, funcref(self, "is_count_more_than_3"), -1)
+	# reproduction
+	new_population = rule(population, new_population, w, h, -1, funcref(self, "is_count_3"), 1)
+	# keeps existing
+	new_population = rule(population, new_population, w, h, 1, funcref(self, "is_count_2_or_3"), 1)
 			
 	return new_population
 
 func update_label(generation, is_sim_running):
-	get_tree().get_root().get_node("Node2D/Label").text = "Generation #%s\nSimulation: %s" % [String(generation), "playing" if is_sim_running == true else "stopped"]
+	get_tree().get_root().get_node("Node2D/Label").text = "Generation #%s\n[Space] Simulation: %s\n[ESC] Restart simulation" % [String(generation), "playing" if is_sim_running == true else "stopped"]
 
 func check_for_restart():
-	if (Input.is_action_just_pressed("ui_accept")):
+	if (Input.is_action_just_pressed("esc")):
 		get_tree().reload_current_scene()
 
 func _input(event):
@@ -147,9 +142,16 @@ func _input(event):
 			is_clicking = false
 
 func toggle_sim():
-	if (Input.is_action_just_released("ui_down")):
+	if (Input.is_action_just_released("ui_accept")):
 		is_sim_running = !is_sim_running
 
+func loop_population(population, new_population):
+	for h in max_h_grids:
+		for w in max_w_grids:
+			new_population = create_next_generation(population, new_population, w, h)
+			position_population(new_population, w, h)
+			
+	return new_population
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
@@ -158,28 +160,18 @@ func _process(delta):
 	update_label(generation, is_sim_running)
 
 	if is_clicking:
-			var w = int(get_viewport().get_mouse_position().x / grid)
-			var h = int(get_viewport().get_mouse_position().y / grid)
-			
-#			print(w)
-#			print(h)
-			
+			var w = min(int(get_viewport().get_mouse_position().x / grid), max_w_grids - 1)
+			var h = min(int(get_viewport().get_mouse_position().y / grid), max_h_grids - 1)
+
 			population[h][w] = {"status": 1, "ref": create_cell(w, h, true)}
-#			print(population[1])
-			position_population(population)
+			position_population(population, w, h)
 
 	if is_sim_running:
 		if frames > sim_step - 1:
 			generation += 1
 			var new_population = population.duplicate(true)
-			population = create_next_generation(population, new_population)
-#			print("a", population[1])
-#			print("---------------")
-			position_population(population)
+			population = loop_population(population, new_population)
+			
 			frames = 0
 		else:
 			frames += 1
-
-#
-	
-	
